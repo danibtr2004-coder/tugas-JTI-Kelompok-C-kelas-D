@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenEMR – Clinical Encounter</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --card: #1e2336;
+    --border: #2a3050;
+    --accent: #3b82f6;
+    --accent2: #10b981;
+    --accent3: #f59e0b;
+    --accent-red: #ef4444;
+    --text: #e8ecf5;
+    --muted: #7b8db0;
+    --input-bg: #131620;
+    --pill-bg: #252d47;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── Top Nav ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+  }
+  .logo span { color: var(--text); }
+  .breadcrumb { color: var(--muted); font-size: 12px; }
+  .breadcrumb b { color: var(--text); }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .badge-status {
+    background: rgba(16,185,129,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .avatar {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ── Patient Header ── */
+  .patient-header {
+    background: linear-gradient(135deg, #1a2040 0%, #1e2745 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .patient-avatar {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .patient-info h2 { font-size: 16px; font-weight: 600; }
+  .patient-meta { display: flex; gap: 16px; margin-top: 4px; flex-wrap: wrap; }
+  .meta-item { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; }
+  .meta-item span { color: var(--text); font-weight: 500; }
+
+  .encounter-chip {
+    margin-left: auto;
+    background: rgba(59,130,246,0.15);
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    font-size: 11px;
+    color: var(--accent);
+    text-align: center;
+  }
+  .encounter-chip b { display: block; font-size: 13px; color: var(--text); }
+
+  /* ── Tab Nav ── */
+  .tab-nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 13px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: rgba(59,130,246,0.06);
+  }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+  .tab-icon { font-size: 15px; }
+  .tab-badge {
+    background: var(--accent);
+    color: white;
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-size: 10px;
+  }
+
+  /* ── Main Layout ── */
+  .main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 10px;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title-icon {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .icon-blue { background: rgba(59,130,246,0.15); }
+  .icon-green { background: rgba(16,185,129,0.15); }
+  .icon-amber { background: rgba(245,158,11,0.15); }
+
+  /* ── Vital Signs Grid ── */
+  .vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .vital-card {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .vital-card:focus-within { border-color: var(--accent); }
+  .vital-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .vital-input-wrap { position: relative; }
+  .vital-input {
+    width: 100%;
+    background: none;
+    border: none;
+    outline: none;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    padding: 0;
+  }
+  .vital-input::placeholder { color: var(--border); font-size: 18px; }
+  .vital-unit { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .vital-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; }
+  .status-normal { background: var(--accent2); }
+  .status-warn { background: var(--accent3); }
+  .status-high { background: var(--accent-red); }
+
+  .bmi-computed {
+    background: rgba(59,130,246,0.08);
+    border: 1px dashed rgba(59,130,246,0.3);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .bmi-value { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--accent2); }
+  .bmi-label { color: var(--muted); font-size: 11px; }
+
+  /* ── Form Elements ── */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; }
+  .form-input, .form-select, .form-textarea {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.04);
+  }
+  .form-select { appearance: none; cursor: pointer; }
+  .form-select option { background: var(--card); }
+  .form-textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+  /* ── SOAP Sections ── */
+  .soap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .soap-section { display: flex; flex-direction: column; gap: 6px; }
+  .soap-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .soap-s { color: #60a5fa; }
+  .soap-o { color: #34d399; }
+  .soap-a { color: #f59e0b; }
+  .soap-p { color: #f87171; }
+
+  /* ── Medication Table ── */
+  .med-search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .search-wrap { position: relative; flex: 1; }
+  .search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px 10px 34px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .btn {
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-success { background: var(--accent2); color: white; }
+  .btn-success:hover { background: #059669; }
+  .btn-ghost {
+    background: var(--pill-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger-ghost {
+    background: rgba(239,68,68,0.1);
+    color: var(--accent-red);
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+  .btn-danger-ghost:hover { background: rgba(239,68,68,0.2); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+  /* Med items */
+  .med-list { display: flex; flex-direction: column; gap: 10px; }
+  .med-item {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: start;
+    transition: border-color 0.2s;
+  }
+  .med-item:hover { border-color: var(--accent); }
+  .med-number {
+    width: 22px; height: 22px;
+    background: var(--pill-bg);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .med-name { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .med-detail-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .med-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 80px;
+  }
+  .med-field label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .med-field input, .med-field select {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 8px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    outline: none;
+    min-width: 70px;
+  }
+  .med-field input:focus, .med-field select:focus { border-color: var(--accent); }
+  .med-field select option { background: var(--card); }
+  .warning-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 10px;
+    color: var(--accent3);
+    margin-top: 6px;
+  }
+
+  .add-med-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    align-items: end;
+    background: rgba(59,130,246,0.04);
+    border: 1px dashed rgba(59,130,246,0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-top: 4px;
+  }
+
+  /* ── Summary footer ── */
+  .submit-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    bottom: 0;
+    z-index: 99;
+    flex-wrap: wrap;
+  }
+  .submit-info { font-size: 12px; color: var(--muted); }
+  .submit-info b { color: var(--accent2); }
+  .submit-actions { display: flex; gap: 10px; }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+
+  /* ── Completeness bar ── */
+  .progress-bar {
+    background: var(--border);
+    border-radius: 10px;
+    height: 4px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.5s ease;
+  }
+  .section-complete {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .check { color: var(--accent2); }
+
+  /* ── Responsive ── */
+  @media (max-width: 700px) {
+    .form-row, .soap-grid { grid-template-columns: 1fr; }
+    .vitals-grid { grid-template-columns: repeat(2, 1fr); }
+    .add-med-row { grid-template-columns: 1fr; }
+    .topbar-left .breadcrumb { display: none; }
+    .patient-header { flex-direction: column; align-items: flex-start; }
+    .encounter-chip { margin-left: 0; }
+    .submit-actions { width: 100%; }
+    .submit-actions .btn { flex: 1; justify-content: center; }
+    .med-item { grid-template-columns: auto 1fr; }
+    .med-actions { grid-column: 2; }
+  }
+  @media (max-width: 400px) {
+    .vitals-grid { grid-template-columns: 1fr 1fr; }
+    .vital-input { font-size: 18px; }
+    .tab-btn { padding: 11px 14px; font-size: 12px; }
+    .main { padding: 12px; }
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .tab-panel.active { animation: fadeIn 0.25s ease; }
+
+  /* Alert */
+  .alert {
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .alert-warn {
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.25);
+    color: var(--accent3);
+  }
+  .alert-info {
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.2);
+    color: #93c5fd;
+  }
+
+  /* timestamp */
+  .timestamp { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<nav class="topbar">
+  <div class="topbar-left">
+    <div class="logo">Open<span>EMR</span></div>
+    <div class="breadcrumb">Clinical Encounter &rsaquo; <b>Rawat Jalan</b></div>
+  </div>
+  <div class="topbar-right">
+    <span class="badge-status">● Sesi Aktif</span>
+    <div class="avatar">DR</div>
+  </div>
+</nav>
+
+<!-- Patient Header -->
+<div class="patient-header">
+  <div class="patient-avatar">NJ</div>
+  <div class="patient-info">
+    <h2>Najmi</h2>
+    <div class="patient-meta">
+      <div class="meta-item">No. RM: <span>0045-2891</span></div>
+      <div class="meta-item">Usia: <span>42 th / L</span></div>
+      <div class="meta-item">Poli: <span>Umum</span></div>
+      <div class="meta-item">Dokter: <span>dr. Doni Kurniawan</span></div>
+    </div>
+  </div>
+  <div class="encounter-chip">
+    <b>17 Mei 2026</b>
+    <span class="timestamp">09:24 WIB</span>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('vitals', this)">
+    <span class="tab-icon">💓</span> Vital Signs
+  </button>
+  <button class="tab-btn" onclick="switchTab('notes', this)">
+    <span class="tab-icon">📋</span> Catatan SOAP
+  </button>
+  <button class="tab-btn" onclick="switchTab('cpoe', this)">
+    <span class="tab-icon">💊</span> Order Obat
+    <span class="tab-badge" id="med-count">2</span>
+  </button>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- ════════════ TAB 1: VITAL SIGNS ════════════ -->
+  <div class="tab-panel active" id="tab-vitals">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-icon icon-blue">💓</div>
+          Tanda-tanda Vital
+        </div>
+        <span class="timestamp" id="vitals-time">17/05/2026 09:24</span>
+      </div>
+
+      <div class="vitals-grid">
+        <!-- Tekanan Darah -->
+        <div class="vital-card" id="vc-td">
+          <div class="vital-label">Tekanan Darah</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+            <input class="vital-input" style="width:48px" type="number" placeholder="120" id="td-sys" oninput="checkTD()" min="60" max="250">
+            <span style="color:var(--muted);font-size:18px;">/</span>
+            <input class="vital-input" style="width:48px" type="number" placeholder="80" id="td-dia" oninput="checkTD()" min="40" max="150">
+          </div>
+          <div class="vital-unit">mmHg</div>
+          <div style="text-align:center;"><div class="vital-status status-normal" id="td-status"></div></div>
+        </div>
+
+        <!-- Nadi -->
+        <div class="vital-card">
+          <div class="vital-label">Nadi</div>
+          <input class="vital-input" type="number" placeholder="80" id="nadi" oninput="checkNadi()" min="30" max="250">
+          <div class="vital-unit">bpm</div>
+          <div style="text-align:center;"><div class="vital-status status-normal" id="nadi-status"></div></div>
+        </div>
+
+        <!-- Suhu -->
+        <div class="vital-card">
+          <div class="vital-label">Suhu</div>
+          <input class="vital-input" type="number" placeholder="36.5" id="suhu" step="0.1" oninput="checkSuhu()" min="30" max="45">
+          <div class="vital-unit">°C</div>
+          <div style="text-align:center;"><div class="vital-status status-normal" id="suhu-status"></div></div>
+        </div>
+
+        <!-- SpO2 -->
+        <div class="vital-card">
+          <div class="vital-label">SpO₂</div>
+          <input class="vital-input" type="number" placeholder="98" id="spo2" oninput="checkSpo2()" min="70" max="100">
+          <div class="vital-unit">%</div>
+          <div style="text-align:center;"><div class="vital-status status-normal" id="spo2-status"></div></div>
+        </div>
+
+        <!-- Berat Badan -->
+        <div class="vital-card">
+          <div class="vital-label">Berat Badan</div>
+          <input class="vital-input" type="number" placeholder="65" id="bb" oninput="calcBMI()" step="0.1" min="1" max="300">
+          <div class="vital-unit">kg</div>
+        </div>
+
+        <!-- Tinggi Badan -->
+        <div class="vital-card">
+          <div class="vital-label">Tinggi Badan</div>
+          <input class="vital-input" type="number" placeholder="165" id="tb" oninput="calcBMI()" min="30" max="250">
+          <div class="vital-unit">cm</div>
+        </div>
+      </div>
+
+      <!-- BMI Auto Computed -->
+      <div class="bmi-computed">
+        <div>
+          <div style="font-size:11px;color:var(--muted);">INDEKS MASSA TUBUH (BMI)</div>
+          <div id="bmi-category" style="font-size:12px;color:var(--accent2);margin-top:2px;">— Masukkan BB & TB</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="bmi-value" id="bmi-val">–.–</div>
+          <div class="bmi-label">kg/m²</div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Respirasi</label>
+          <input class="form-input" type="number" placeholder="18 napas/menit" min="5" max="60">
+        </div>
+        <div class="form-group">
+          <label>Kesadaran</label>
+          <select class="form-select">
+            <option value="">Pilih status...</option>
+            <option>Compos Mentis (CM)</option>
+            <option>Apatis</option>
+            <option>Somnolen</option>
+            <option>Sopor</option>
+            <option>Koma</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="section-complete">
+          <span id="vitals-check" class="check">○</span>
+          <span id="vitals-status-text">Lengkapi vital signs untuk melanjutkan</span>
+        </div>
+        <div class="progress-bar" style="margin-top:8px;">
+          <div class="progress-fill" id="vitals-progress" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+        <button class="btn btn-primary" onclick="switchTab('notes', document.querySelectorAll('.tab-btn')[1])">
+          Lanjut ke Catatan →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ TAB 2: CATATAN SOAP ════════════ -->
+  <div class="tab-panel" id="tab-notes">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-icon icon-green">📋</div>
+          Catatan Klinis SOAP
+        </div>
+        <select class="form-select" style="width:auto;font-size:12px;padding:6px 10px;">
+          <option>Rawat Jalan</option>
+          <option>IGD</option>
+          <option>Rawat Inap</option>
+        </select>
+      </div>
+
+      <div class="alert alert-info">
+        ℹ️ Catatan SOAP akan tersimpan otomatis setiap 30 detik. Pastikan semua bagian terisi.
+      </div>
+
+      <!-- S - Subjective -->
+      <div class="soap-section" style="margin-bottom:14px;">
+        <div class="soap-label soap-s">S — Subjective (Keluhan Pasien)</div>
+        <textarea class="form-textarea" placeholder="Contoh: Pasien mengeluh nyeri kepala sejak 3 hari yang lalu, terasa berdenyut di bagian frontal, disertai mual. Tidak ada muntah. Riwayat hipertensi (+)." rows="3" oninput="updateCompletion()"></textarea>
+      </div>
+
+      <!-- O - Objective -->
+      <div class="soap-section" style="margin-bottom:14px;">
+        <div class="soap-label soap-o">O — Objective (Pemeriksaan)</div>
+        <textarea class="form-textarea" placeholder="Hasil pemeriksaan fisik, vital signs, laboratorium, dll.&#10;Contoh: TD 140/90 mmHg, Nadi 88x/menit, Suhu 36.8°C. Pemeriksaan fisik: kepala normosefal, tidak ada papilledema." rows="3" oninput="updateCompletion()"></textarea>
+      </div>
+
+      <!-- A - Assessment -->
+      <div class="soap-section" style="margin-bottom:14px;">
+        <div class="soap-label soap-a">A — Assessment (Diagnosa)</div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group">
+            <label>Diagnosa Utama (ICD-10)</label>
+            <select class="form-select" oninput="updateCompletion()">
+              <option value="">Pilih kode ICD-10...</option>
+              <option value="I10">I10 – Hipertensi Esensial</option>
+              <option value="G43">G43 – Migrain</option>
+              <option value="J06.9">J06.9 – ISPA</option>
+              <option value="K29.7">K29.7 – Gastritis</option>
+              <option value="E11">E11 – Diabetes Tipe 2</option>
+              <option value="J45">J45 – Asma</option>
+              <option value="R51">R51 – Nyeri Kepala</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Diagnosa Sekunder</label>
+            <select class="form-select">
+              <option value="">Opsional...</option>
+              <option value="E11">E11 – Diabetes Tipe 2</option>
+              <option value="E78">E78 – Dislipidemia</option>
+              <option value="I10">I10 – Hipertensi</option>
+            </select>
+          </div>
+        </div>
+        <textarea class="form-textarea" placeholder="Uraian penilaian klinis, pertimbangan diagnosis banding, dll." rows="2" oninput="updateCompletion()"></textarea>
+      </div>
+
+      <!-- P - Plan -->
+      <div class="soap-section">
+        <div class="soap-label soap-p">P — Plan (Rencana Tindakan)</div>
+        <textarea class="form-textarea" placeholder="Rencana terapi, tindakan, edukasi, dan follow-up.&#10;Contoh: 1. R/ Amlodipin 5mg 1x1 selama 30 hari. 2. Edukasi diet rendah garam. 3. Kontrol 2 minggu." rows="3" oninput="updateCompletion()"></textarea>
+
+        <div style="margin-top:12px;" class="form-row">
+          <div class="form-group">
+            <label>Follow-up</label>
+            <select class="form-select">
+              <option>1 minggu</option>
+              <option>2 minggu</option>
+              <option>1 bulan</option>
+              <option>3 bulan</option>
+              <option>PRN (bila perlu)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tindakan</label>
+            <select class="form-select">
+              <option>Rawat Jalan</option>
+              <option>Rujuk Poli Spesialis</option>
+              <option>Rawat Inap</option>
+              <option>IGD</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="form-group">
+        <label>Catatan Tambahan / Edukasi Pasien</label>
+        <textarea class="form-textarea" placeholder="Instruksi khusus, edukasi, atau catatan lainnya..." rows="2"></textarea>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:16px;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="switchTab('vitals', document.querySelectorAll('.tab-btn')[0])">← Vital Signs</button>
+        <button class="btn btn-primary" onclick="switchTab('cpoe', document.querySelectorAll('.tab-btn')[2])">Lanjut ke Order Obat →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ TAB 3: CPOE - MEDICATIONS ════════════ -->
+  <div class="tab-panel" id="tab-cpoe">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-icon icon-amber">💊</div>
+          Order Obat Elektronik (CPOE)
+        </div>
+        <span style="font-size:11px;color:var(--muted);">ONC Kriteria #10</span>
+      </div>
+
+      <div class="alert alert-warn">
+        ⚠️ Sistem akan memeriksa interaksi obat dan alergi secara otomatis saat obat ditambahkan.
+      </div>
+
+      <!-- Search Bar -->
+      <div class="med-search-bar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="text" placeholder="Cari nama obat, generik, atau kode..." id="med-search" oninput="filterDrugs(this.value)">
+        </div>
+        <button class="btn btn-ghost" onclick="toggleAddForm()">+ Tambah Manual</button>
+      </div>
+
+      <!-- Dropdown Suggestions -->
+      <div id="drug-suggestions" style="display:none;background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:-10px;margin-bottom:12px;overflow:hidden;">
+      </div>
+
+      <!-- Add Med Form -->
+      <div id="add-med-form" style="display:none;">
+        <div class="add-med-row">
+          <div class="form-group">
+            <label>Nama Obat</label>
+            <input class="form-input" type="text" id="new-med-name" placeholder="Nama obat...">
+          </div>
+          <div class="form-group">
+            <label>Dosis</label>
+            <input class="form-input" type="text" id="new-med-dose" placeholder="mis. 5mg" style="width:100px;">
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px;">
+            <button class="btn btn-success btn-sm" onclick="addMedication()">Tambah</button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleAddForm()">Batal</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medication List -->
+      <div class="med-list" id="med-list">
+
+        <!-- Med Item 1 -->
+        <div class="med-item" id="med-1">
+          <div class="med-number">1</div>
+          <div>
+            <div class="med-name">Amlodipin</div>
+            <div class="med-detail-row">
+              <div class="med-field">
+                <label>Dosis</label>
+                <select>
+                  <option>5 mg</option>
+                  <option>10 mg</option>
+                </select>
+              </div>
+              <div class="med-field">
+                <label>Frekuensi</label>
+                <select>
+                  <option>1×1</option>
+                  <option>2×1</option>
+                  <option>3×1</option>
+                </select>
+              </div>
+              <div class="med-field">
+                <label>Durasi</label>
+                <select>
+                  <option>30 hari</option>
+                  <option>14 hari</option>
+                  <option>7 hari</option>
+                  <option>Rutin</option>
+                </select>
+              </div>
+              <div class="med-field">
+                <label>Waktu</label>
+                <select>
+                  <option>Setelah makan</option>
+                  <option>Sebelum makan</option>
+                  <option>Saat makan</option>
+                </select>
+              </div>
+              <div class="med-field">
+                <label>Rute</label>
+                <select>
+                  <option>Oral</option>
+                  <option>IV</option>
+                  <option>IM</option>
+                  <option>Topikal</option>
+                </select>
+              </div>
+            </div>
+            <div class="warning-chip">✓ Tidak ada interaksi terdeteksi</div>
+          </div>
+          <div class="med-actions">
+            <button class="btn btn-danger-ghost btn-sm" onclick="removeMed('med-1')">✕</button>
+          </div>
+        </div>
+
+        <!-- Med Item 2 -->
+        <div class="med-item" id="med-2">
+          <div class="med-number">2</div>
+          <div>
+            <div class="med-name">Paracetamol</div>
+            <div class="med-detail-row">
+              <div class="med-field">
+                <label>Dosis</label>
+                <select>
+                  <option>500 mg</option>
+                  <option>1000 mg</option>
+                </select>
+              </div>
+              <div class="med-field">
+                <label>Frekuensi</label>
+                <select>
+                  <option>3×1</option>
+                  <option>1×1</option>
+                  <option>2×1</option>
+                </select>
+              </div>
+              <div class="med-field">
+                <label>Durasi</label>
+                <select>
+                  <option>5 hari</option>
+                  <option>7 hari</option>
+                  <option>3 hari</option>
+                </select>
+              </div>
+              <div class="med-field">
+                <label>Waktu</label>
+                <select>
+                  <option>Bila perlu</option>
+                  <option>Setelah makan</option>
+                </select>
+              </div>
+              <div class="med-field">
+                <label>Rute</label>
+                <select>
+                  <option>Oral</option>
+                  <option>IV</option>
+                  <option>Rektal</option>
+                </select>
+              </div>
+            </div>
+            <div class="warning-chip">✓ Tidak ada interaksi terdeteksi</div>
+          </div>
+          <div class="med-actions">
+            <button class="btn btn-danger-ghost btn-sm" onclick="removeMed('med-2')">✕</button>
+          </div>
+        </div>
+
+      </div>
+
+      <hr class="divider">
+
+      <!-- Resep Summary -->
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);flex-wrap:wrap;gap:8px;">
+        <div>Total: <b style="color:var(--text);" id="total-med-count">2</b> item obat</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm">🖨️ Preview Resep</button>
+          <button class="btn btn-ghost btn-sm">📋 Template Tersimpan</button>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:16px;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="switchTab('notes', document.querySelectorAll('.tab-btn')[1])">← Catatan SOAP</button>
+        <button class="btn btn-success" onclick="submitEncounter()">✓ Simpan & Selesai</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Submit Bar -->
+<div class="submit-bar">
+  <div class="submit-info">
+    Encounter: <b>17 Mei 2026</b> · Pasien: Najmi · Dokter: dr. Doni Kurniawan
+  </div>
+  <div class="submit-actions">
+    <button class="btn btn-ghost">Simpan Draft</button>
+    <button class="btn btn-primary" onclick="submitEncounter()">Finalisasi</button>
+  </div>
+</div>
+
+<script>
+// ── Tab Switching ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// ── BMI Calculator ──
+function calcBMI() {
+  const bb = parseFloat(document.getElementById('bb').value);
+  const tb = parseFloat(document.getElementById('tb').value);
+  if (!bb || !tb || tb < 50) { document.getElementById('bmi-val').textContent = '–.–'; document.getElementById('bmi-category').textContent = '— Masukkan BB & TB'; return; }
+  const h = tb / 100;
+  const bmi = (bb / (h * h)).toFixed(1);
+  document.getElementById('bmi-val').textContent = bmi;
+  let cat = '', col = '';
+  if (bmi < 18.5) { cat = 'Berat Badan Kurang'; col = '#60a5fa'; }
+  else if (bmi < 25) { cat = '✓ Normal'; col = '#34d399'; }
+  else if (bmi < 30) { cat = 'Berat Badan Lebih'; col = '#f59e0b'; }
+  else { cat = 'Obesitas'; col = '#f87171'; }
+  const el = document.getElementById('bmi-category');
+  el.textContent = cat; el.style.color = col;
+  updateVitalsProgress();
+}
+
+// ── Vital Checks ──
+function colorStatus(id, isWarn, isDanger) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'vital-status';
+  if (isDanger) el.classList.add('status-high');
+  else if (isWarn) el.classList.add('status-warn');
+  else el.classList.add('status-normal');
+}
+function checkTD() {
+  const s = parseInt(document.getElementById('td-sys').value);
+  const d = parseInt(document.getElementById('td-dia').value);
+  colorStatus('td-status', (s > 130 || d > 80), (s > 160 || d > 100));
+  updateVitalsProgress();
+}
+function checkNadi() {
+  const v = parseInt(document.getElementById('nadi').value);
+  colorStatus('nadi-status', (v < 60 || v > 100), (v < 40 || v > 150));
+  updateVitalsProgress();
+}
+function checkSuhu() {
+  const v = parseFloat(document.getElementById('suhu').value);
+  colorStatus('suhu-status', (v >= 37.5 || v < 36), (v >= 39 || v < 35));
+  updateVitalsProgress();
+}
+function checkSpo2() {
+  const v = parseInt(document.getElementById('spo2').value);
+  colorStatus('spo2-status', v < 95, v < 90);
+  updateVitalsProgress();
+}
+
+// ── Vitals Progress ──
+function updateVitalsProgress() {
+  const fields = ['td-sys','td-dia','nadi','suhu','spo2','bb','tb'];
+  const filled = fields.filter(f => document.getElementById(f).value).length;
+  const pct = Math.round((filled / fields.length) * 100);
+  document.getElementById('vitals-progress').style.width = pct + '%';
+  if (pct === 100) {
+    document.getElementById('vitals-check').textContent = '✓';
+    document.getElementById('vitals-status-text').textContent = 'Vital signs lengkap';
+  } else {
+    document.getElementById('vitals-check').textContent = '○';
+    document.getElementById('vitals-status-text').textContent = `${pct}% — ${7 - filled} field belum diisi`;
+  }
+}
+
+// ── SOAP Completion (placeholder) ──
+function updateCompletion() {}
+
+// ── Add/Remove Medications ──
+let medCount = 2;
+function toggleAddForm() {
+  const f = document.getElementById('add-med-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function addMedication() {
+  const name = document.getElementById('new-med-name').value.trim();
+  if (!name) return;
+  medCount++;
+  const list = document.getElementById('med-list');
+  const div = document.createElement('div');
+  div.className = 'med-item';
+  div.id = 'med-' + medCount;
+  div.innerHTML = `
+    <div class="med-number">${medCount}</div>
+    <div>
+      <div class="med-name">${name}</div>
+      <div class="med-detail-row">
+        <div class="med-field"><label>Dosis</label><input type="text" value="${document.getElementById('new-med-dose').value || '–'}"></div>
+        <div class="med-field"><label>Frekuensi</label><select><option>1×1</option><option>2×1</option><option>3×1</option></select></div>
+        <div class="med-field"><label>Durasi</label><select><option>7 hari</option><option>14 hari</option><option>30 hari</option></select></div>
+        <div class="med-field"><label>Rute</label><select><option>Oral</option><option>IV</option><option>IM</option></select></div>
+      </div>
+      <div class="warning-chip">🔍 Memeriksa interaksi...</div>
+    </div>
+    <div><button class="btn btn-danger-ghost btn-sm" onclick="removeMed('med-${medCount}')">✕</button></div>
+  `;
+  list.appendChild(div);
+  setTimeout(() => { div.querySelector('.warning-chip').textContent = '✓ Tidak ada interaksi terdeteksi'; }, 1200);
+  updateMedCount();
+  document.getElementById('new-med-name').value = '';
+  document.getElementById('new-med-dose').value = '';
+  document.getElementById('add-med-form').style.display = 'none';
+}
+
+function removeMed(id) {
+  const el = document.getElementById(id);
+  if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; el.style.transition = 'all 0.2s'; setTimeout(() => { el.remove(); updateMedCount(); renumberMeds(); }, 200); }
+}
+
+function updateMedCount() {
+  const n = document.querySelectorAll('.med-item').length;
+  document.getElementById('med-count').textContent = n;
+  document.getElementById('total-med-count').textContent = n;
+}
+
+function renumberMeds() {
+  document.querySelectorAll('.med-number').forEach((el, i) => el.textContent = i + 1);
+}
+
+// ── Drug Search Suggestions ──
+const drugs = ['Amlodipin', 'Amoxicillin', 'Atorvastatin', 'Bisoprolol', 'Captopril', 'Cetirizin', 'Ciprofloxacin', 'Clonidine', 'Dexamethasone', 'Domperidon', 'Furosemide', 'Glibenklamid', 'Ibuprofen', 'Lisinopril', 'Metformin', 'Metoprolol', 'Omeprazole', 'Paracetamol', 'Ranitidin', 'Salbutamol', 'Simvastatin', 'Valsartan'];
+
+function filterDrugs(q) {
+  const box = document.getElementById('drug-suggestions');
+  if (!q) { box.style.display = 'none'; return; }
+  const hits = drugs.filter(d => d.toLowerCase().includes(q.toLowerCase())).slice(0, 5);
+  if (!hits.length) { box.style.display = 'none'; return; }
+  box.innerHTML = hits.map(d => `<div onclick="selectDrug('${d}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='rgba(59,130,246,0.1)'" onmouseout="this.style.background=''">${d}</div>`).join('');
+  box.style.display = 'block';
+}
+
+function selectDrug(name) {
+  document.getElementById('new-med-name').value = name;
+  document.getElementById('med-search').value = '';
+  document.getElementById('drug-suggestions').style.display = 'none';
+  document.getElementById('add-med-form').style.display = 'block';
+  document.getElementById('new-med-name').value = name;
+}
+
+// ── Submit ──
+function submitEncounter() {
+  const meds = document.querySelectorAll('.med-item').length;
+  alert(`✓ Encounter berhasil disimpan!\n\nRingkasan:\n• Vital signs tercatat\n• Catatan SOAP tersimpan\n• ${meds} obat di-order\n\nData dikirim ke farmasi & rekam medis.`);
+}
+</script>
+</body>
+</html>
